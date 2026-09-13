@@ -1,0 +1,55 @@
+\documentclass[a4paper,11pt,twoside,russian,english]{article}
+\usepackage{CMAI} % Connecting CMAI Conference package
+
+% The following environments are already defined:
+% theorem, corollary, conclusion, lemma, remark, proposition, fact, example, 
+% note, claim, and definition.
+% if you need some additional environment, say, Conjecture, please, 
+% use the definition of the following form:
+% \newtheorem{conjecture}[theorem]{Conjecture}
+
+% If you need additional macros, put them below:
+\newcommand{\Residual}{\mathcal R}
+
+\begin{document}
+
+\selectlanguage{english}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    COMMANDS FOR THE AUTHORS
+\author{Kingston}{P.} % If there is only 1 author, please, remove the next command.
+\author{Fagnoni}{T.} % If there are more than 2 authors, please, add the command.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    COMMANDS FOR THE TITLE
+\CMAITitle{Proof-Carrying Streamed Workflow Graphs}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    COMMANDS FOR THE AFFILIATIONS
+% If there is only 1 author, please, 
+% use just one of the next commands in the following way:
+% \affiliation{The unique author's affiliation,  City, Country}{{}}
+% if there are more than 1 authors, 
+% write the author's serial number in the second curly brackets:
+\affiliation{AppliedAI, Abu Dhabi, United Arab Emirates}{1,2}
+
+\mail{phillip.kingston@opus.com}  % e-mail
+\mail{theo.fagnoni@opus.com} % e-mail
+
+\CMAImaketitle
+
+Incremental construction of directed workflow graphs can be formulated as a constrained graph-extension problem: each proposed addition should preserve the existence of a viable completion. In AI systems, an emitted addition can be syntactically correct even when its evidence is inadequate, its scope is invalid, or it makes the remaining policy obligations unsatisfiable. We introduce \emph{proof-carrying streams}, in which every addition updates the committed graph and transforms a certificate witnessing that at least one acceptable completion remains.
+
+We model each step in the graph construction by a state $s$, which records the current committed graph and all information needed to apply future additions and determine whether the construction remains viable. For an arbitrary state space $S$, an alphabet $\Sigma$ of possible additions, a deterministic transition function $\delta : S \times \Sigma \to S$ that assigns a unique successor state to each state and addition, and a set $F$ of acceptable states, we define the canonical \emph{viability residual} $\Residual_s$. The viability residual $\Residual_s$ contains exactly the finite addition streams that can be admitted from $s$ while leaving the resulting state viable, i.e., still able to reach an accepting state by some finite continuation. As additions are admitted, the viability residual evolves to describe exactly the futures that remain viable from the resulting state. A certificate is sound at a construction state when every future stream it represents belongs to that state's viability residual. Graph construction that begins with a non-empty sound certificate and proceeds through sound certificate updates preserves completion viability through every admitted addition.
+
+We encode each construction state into a proof state that retains enough information to determine completion viability. Without loss of generality, we restrict every proof state to the image of this encoding, so every proof state represents at least one construction state. A proof-state abstraction consists of the encoding, an update rule that computes the next proof state from the current proof state and the next addition, and a classification of proof states as viable or nonviable. The abstraction is viability-exact when two conditions hold: updating an encoded proof state produces the same result as first applying the addition to the construction state and then encoding its successor, and the proof state's viability classification agrees exactly with the viability of every construction state it represents. These requirements imply that construction states encoded as the same proof state must have equal viability residuals. Consequently, grouping construction states by equality of their residuals forms the coarsest viability-exact abstraction: every viability-exact abstraction must keep construction states with different residuals separate. A finite viability-exact abstraction exists if and only if the construction states have finitely many distinct residuals.
+
+
+{\footnotesize
+% Please use the following commands to format of funding acknowledgments (can be omitted)
+% \medskip\noindent\textbf{Funding}: 
+% Funding acknowledgment, if any, goes here.
+
+\medskip\noindent\textbf{Keywords}: proof-carrying streams, workflow graphs, viability residual, residual languages, Nerode equivalence, incremental verification.
+
+\medskip\noindent\textbf{2020 Mathematics Subject Classification: }{68Q45, 68Q70, 68Q60, 68T27}
+}
+
+
+\end{document}

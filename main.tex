@@ -1,0 +1,1005 @@
+\documentclass[11pt]{article}
+
+\usepackage{opus-research}
+\usepackage{aliascnt}
+\usepackage{listings}
+\usepackage{needspace}
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+\newtheorem{theorem}{Theorem}[section]
+\newaliascnt{lemma}{theorem}
+\newtheorem{lemma}[lemma]{Lemma}
+\aliascntresetthe{lemma}
+\newaliascnt{proposition}{theorem}
+\newtheorem{proposition}[proposition]{Proposition}
+\aliascntresetthe{proposition}
+\newaliascnt{corollary}{theorem}
+\newtheorem{corollary}[corollary]{Corollary}
+\aliascntresetthe{corollary}
+\theoremstyle{definition}
+\newaliascnt{definition}{theorem}
+\newtheorem{definition}[definition]{Definition}
+\aliascntresetthe{definition}
+\newaliascnt{example}{theorem}
+\newtheorem{example}[example]{Example}
+\aliascntresetthe{example}
+\crefname{theorem}{theorem}{theorems}
+\crefname{lemma}{lemma}{lemmas}
+\crefname{proposition}{proposition}{propositions}
+\crefname{corollary}{corollary}{corollaries}
+\crefname{definition}{definition}{definitions}
+\crefname{example}{example}{examples}
+
+\newcommand{\States}{S}
+\newcommand{\Additions}{\Sigma}
+\newcommand{\Accept}{F}
+\newcommand{\Run}{\delta^{*}}
+\newcommand{\Viable}{\mathsf{Viable}}
+\newcommand{\Residual}{\mathcal R}
+\newcommand{\Cert}{C}
+\newcommand{\ProofStates}{P}
+\newcommand{\CertCheck}{\mathsf{Check}}
+\newcommand{\Live}{\mathsf{Live}}
+\newcommand{\Legal}{\mathsf{Legal}}
+\newcommand{\Encode}{E}
+\newcommand{\Update}{U}
+\newcommand{\ResidualEq}{\equiv_{\Residual}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\denote}[1]{\left[\!\left[#1\right]\!\right]}
+
+\lstdefinelanguage{Lean}{
+  morekeywords={def,theorem,namespace,end,where,by,constructor,intro,exact,simpa,using,unfold,fun,Prop,Type,List},
+  sensitive=true,
+  morecomment=[l]{--},
+  morecomment=[s]{/-}{-/},
+  morestring=[b]",
+  literate={→}{{$\to$}}1 {∃}{{$\exists$}}1
+}
+\lstset{
+  language=Lean,
+  basicstyle=\ttfamily\footnotesize,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  framerule=0.25pt,
+  xleftmargin=0.3em,
+  xrightmargin=0.3em,
+  aboveskip=0.5em,
+  belowskip=0.5em,
+  showstringspaces=false
+}
+
+\hypersetup{
+  hidelinks,
+  pdftitle={Opus: Proof-Carrying Streamed Workflow Graphs},
+  pdfauthor={Phillip Kingston and Th\'eo Fagnoni},
+  pdfsubject={Incremental completion viability for streamed workflow graphs},
+  pdfkeywords={proof-carrying streams, streamed workflow graphs, completion viability, residual languages, incremental certificates}
+}
+
+% Compact front matter: tighten the title-block and abstract spacing so that the
+% abstract and keywords fit on the title page.
+\makeatletter
+\renewcommand{\maketitle}{%
+  \begingroup
+  \setlength{\parskip}{0pt}
+  \def\and{\qquad}
+  \begin{center}
+    {\LARGE\@title\par}
+    \vspace{27.77pt}
+    {\normalsize\@author\par}
+    \vspace{0.35em}
+    {\normalsize\@date\par}
+    \vspace{0.35em}
+    {\ccbyncsa\par}
+    \vspace{0.15em}
+    {\footnotesize This work is licensed under a
+      \OpusLicenseName\ License (CC BY-NC-SA 4.0)\par}
+  \end{center}
+  \vspace{0.35em}
+  \endgroup
+}
+\makeatother
+\renewenvironment{abstract}
+  {{\centering\bfseries Abstract\par}%
+   \vspace{0.15em}%
+   \small
+   \setlength{\topsep}{0pt}%
+   \quotation
+   \setlength{\parskip}{0.2em plus 0.05em}}
+  {\endquotation\clearpage}
+\newcommand{\OpusKeywordSkip}{\vspace{0.3em}}
+
+\title{\textbf{Opus}\\[0.15em]
+{\Large Proof-Carrying Streamed Workflow Graphs}
+}
+\author{%
+  \OpusAuthorAffiliation{Phillip Kingston\textsuperscript{*}}{Member of Technical Staff}{AppliedAI}%
+  \and
+  \OpusAuthorAffiliation{Th\'eo Fagnoni}{Member of Technical Staff}{AppliedAI}%
+}
+\date{27 August 2026}
+
+\begin{document}
+\maketitle
+\begingroup
+\renewcommand{\thefootnote}{}
+\footnotetext{\textsuperscript{*} Corresponding author: \href{mailto:phillip.kingston@opus.com}{phillip.kingston@opus.com}}
+\endgroup
+
+\begin{abstract}
+
+Incremental construction of directed workflow graphs can be formulated as a constrained graph-extension problem: each proposed addition should preserve the existence of a viable completion. In AI systems, an emitted addition can be syntactically correct even when its evidence is inadequate, its scope is invalid, or it makes the remaining policy obligations unsatisfiable. We introduce \emph{proof-carrying streams}, in which every addition updates the committed graph and transforms a certificate witnessing that at least one acceptable completion remains.
+
+We model each step in the graph construction by a state $s$, which records the current committed graph and all information needed to apply future additions and determine whether the construction remains viable. For an arbitrary state space $S$, an alphabet $\Sigma$ of possible additions, a deterministic transition function $\delta : S \times \Sigma \to S$ that assigns a unique successor state to each state and addition, and a set $F$ of acceptable states, we define the canonical \emph{viability residual} $\Residual_s$. The viability residual $\Residual_s$ contains exactly the finite addition streams that can be admitted from $s$ while leaving the resulting state viable, i.e., still able to reach an accepting state by some finite continuation. As additions are admitted, the viability residual evolves to describe exactly the futures that remain viable from the resulting state. A certificate is sound at a construction state when every future stream it represents belongs to that state's viability residual. Graph construction that begins with a non-empty sound certificate and proceeds through sound certificate updates preserves completion viability through every admitted addition.
+
+We encode each construction state into a proof state that retains enough information to determine completion viability. Without loss of generality, we restrict every proof state to the image of this encoding, so every proof state represents at least one construction state. A proof-state abstraction consists of the encoding, an update rule that computes the next proof state from the current proof state and the next addition, and a classification of proof states as viable or nonviable. The abstraction is viability-exact when two conditions hold: updating an encoded proof state produces the same result as first applying the addition to the construction state and then encoding its successor, and the proof state's viability classification agrees exactly with the viability of every construction state it represents. These requirements imply that construction states encoded as the same proof state must have equal viability residuals. Consequently, grouping construction states by equality of their residuals forms the coarsest viability-exact abstraction: every viability-exact abstraction must keep construction states with different residuals separate. A finite viability-exact abstraction exists if and only if the construction states have finitely many distinct residuals.
+
+
+\OpusKeywordSkip
+\noindent\textbf{Keywords:} proof-carrying streams, streamed workflow graphs, completion viability, exact admission, residual languages, incremental certificates, formal verification.
+\end{abstract}
+
+\section{Introduction}\label{sec:introduction}
+
+Workflow graphs are increasingly assembled in pieces. An AI agent may propose a task and its dependencies; a service may add evidence, data mappings, or approval edges; a human-operated tool may close one branch and open another. Once admitted, such operations become part of the committed workflow. We call a workflow graph constructed through such a sequence of admitted atomic operations a \emph{streamed workflow graph}. Thus, graph construction is an incremental admission problem rather than a one-shot design exercise.
+
+Local legality is not enough. A proposed addition can be well typed, refer only to existing objects, and pass every local policy check, yet still eliminate the last globally acceptable way to finish the workflow. An approval route may be closed after all alternatives have already disappeared. A new dependency may create an obligation for which no compatible discharge remains. Evidence may be valid for its immediate subject while committing the graph to a branch whose final policy cannot be satisfied. The addition is locally coherent but globally fatal.
+
+The natural admission condition is therefore existential completion viability: after admitting the addition, at least one policy-compliant completion must remain.\newline
+The challenge is to maintain this guarantee as the workflow is constructed incrementally. Carrying a proof of one fixed completion would preserve viability, but would commit the workflow to a particular future. Recomputing viability from scratch after every addition would avoid that commitment, but would discard the proof information established at previous steps. Instead, we let the unfinished workflow carry a certificate that evolves with it: each admitted addition is accompanied by a checked update of the current certificate, so evidence of remaining completion viability is maintained throughout construction.
+
+The semantic object underlying this view is the \emph{viability residual}. For a current state $s$, it records every finite addition stream that may be consumed next while still leaving some acceptable continuation. Let $w$ be a finite stream of additions. Write $\Run(s,w)$ for the state reached from $s$ by applying the additions in $w$ in order. For a second finite addition stream $u$, write $wu$ for their concatenation, with $w$ consumed first and $u$ second. Let $L$ be a language, meaning a set of finite addition streams. The \emph{left quotient} of $L$ by $w$, also called the language derivative, is
+\[
+  w^{-1}L=\{u:wu\in L\}
+\]
+It contains exactly those streams $u$ for which consuming $w$ followed by $u$ produces a stream in $L$. If $w$ is consumed, the new residual is not an unrelated semantic object; it is exactly $w^{-1}\Residual_s$. This yields the central picture:
+\begin{equation}\label{eq:central-picture}
+ (s,\Residual_s)
+   \xrightarrow{\;w\;}
+ \bigl(\Run(s,w),\,w^{-1}\Residual_s\bigr)
+\end{equation}
+Construction moves forward, while the proof of remaining futures is transformed by consuming the same stream.
+We use \emph{certificate} for a concrete carried representation and \emph{viability proof state}, shortened below to \emph{proof state}, for the semantic information that every viability-exact incremental abstraction must preserve.
+
+The theory is representation-independent. It assumes only a state set, an addition alphabet, deterministic application of one fully specified addition, and an accepting set. No finiteness, acyclicity, graph schema, decision procedure, or complexity bound is required. A workflow graph is one interpretation of the state; the results apply equally to other incrementally constructed objects.
+
+\Needspace*{5\baselineskip}
+
+The main contributions are as follows.
+
+\begin{enumerate}[label=(\roman*)]
+
+  \item \textbf{Proof-carrying streams and prefix-wise viability.}
+  We define proof-carrying streams, in which each admitted addition is
+  accompanied by a checked certificate update, and prove that an initially
+  sound, nonempty certificate together with stepwise-sound updates preserves
+  completion viability at every admitted prefix
+  (\cref{thm:pcs-soundness}).
+
+  \item \textbf{Viability residuals as the semantic basis for admission and update.}
+  We define the viability residual $\Residual_s$ as the finite addition streams
+  whose consumption leaves the resulting state viable. We prove its
+  residual--successor equivalence, derive the canonical admission criterion,
+  and show that it updates under consumed streams by left derivatives
+  (\cref{thm:residual-successor,cor:canonical-admission,thm:derivative}).
+
+  \item \textbf{Minimality and universality of viability-exact proof states.}
+  We prove that every viability-exact incremental proof-state abstraction must
+  distinguish states with different residuals. We then construct the quotient
+  by residual equivalence, prove that it is the coarsest viability-exact
+  abstraction, establish the unique factorization of every viability-exact
+  abstraction onto this quotient, and show that residual languages provide a
+  canonically isomorphic representation
+  (\cref{thm:separation,thm:coarsest,prop:canonical-abstraction}).
+
+\end{enumerate}
+
+We instantiate these results for streamed workflow graphs and use a
+two-route example to distinguish local legality, successor viability, and
+residual completeness (\cref{cor:workflow-viability,ex:routes}).
+
+Residual languages, left derivatives, and Nerode-style indistinguishability are classical ideas in automata theory. Proof-carrying code and proof-carrying plans likewise establish the producer/checker architecture. We do not claim these ingredients as new in isolation. The contribution is their proof-system synthesis for unfinished construction streams: the proposition such a stream carries, the canonical way that proposition changes under additions, and the distinctions that no viability-exact incremental proof-state abstraction may discard.
+
+\section{Stream semantics and completion viability}\label{sec:model}
+
+Fix a set $\States$ of construction states, an alphabet $\Additions$ of fully specified atomic construction operations, called additions, a deterministic transition function
+\[
+  \delta:\States\times\Additions\to\States
+\]
+and a set $\Accept\subseteq\States$ of accepting states. We write $\Additions^*$ for finite addition streams and interpret them as observed prefixes of a potentially ongoing construction process. We write $\eps$ for the empty stream and use juxtaposition for stream concatenation. We identify each $a\in\Additions$ with its one-letter stream; hence $aw$ denotes addition $a$ followed by stream $w$. An addition may represent more than the insertion of a node or edge; it can also attach evidence, close a branch, discharge an obligation, or mark the workflow as complete.
+
+
+The extension of $\delta$ to finite streams is the function $\Run:\States\times\Additions^*\to\States$ defined by
+\begin{equation}\label{eq:run}
+\begin{aligned}
+  \Run(s,\eps)&=s\\
+  \Run(s,aw)&=\Run(\delta(s,a),w)
+\end{aligned}
+\end{equation}
+
+\begin{lemma}[Stream composition]\label{lem:run-composition}
+For all $s\in\States$ and $u,v\in\Additions^*$,
+\begin{equation}\label{eq:run-composition}
+  \Run(s,uv)=\Run(\Run(s,u),v)
+\end{equation}
+\end{lemma}
+
+
+\begin{proof}
+We induct on $u$, after generalizing the starting state $s$.
+The base case when $u=\varepsilon$ is immediate. For $u=au'$, assume the claim
+holds for $u'$ and every starting state. Then
+\[
+\begin{aligned}
+\delta^*(s,(au')v)
+&=\delta^*(\delta(s,a),u'v)\\
+&=\delta^*(\delta^*(\delta(s,a),u'),v)\\
+&=\delta^*(\delta^*(s,au'),v)
+\end{aligned}
+\]
+where the second equality is the induction hypothesis applied at
+$\delta(s,a)$. This proves the claim.
+\end{proof}
+
+The assumption that \(\delta\) is total is only a notational convenience. If illegal additions are possible, we extend the state space with an absorbing dead state \(\bot\). Every illegal application transitions to \(\bot\), with \(\delta(\bot,a)=\bot\) for all \(a\in\Sigma\), and \(\bot\notin F\). Under this totalization, we define 
+\[
+  \Legal(s,a)\quad\Longleftrightarrow\quad\delta(s,a)\ne\bot
+\]
+Failed evidence checks, invalid scopes, and ill-typed graph edits can all be represented this way. Determinism means that a submitted addition contains enough information to determine its successor state. Nondeterministic effects or uncontrollable environment steps require a relational or game-based extension and are outside the present theorem.
+
+\begin{definition}[Completion viability]\label{def:viability}
+A state $s$ is \emph{viable} when there exists a finite continuation that leads from $s$ to an accepting state:
+\begin{equation}\label{eq:viability}
+  \Viable(s)
+  \quad\Longleftrightarrow\quad
+  \exists v\in\Additions^*:\ \Run(s,v)\in\Accept
+\end{equation}
+\end{definition}
+
+This is an existential finite-completion property. It says neither that every continuation succeeds nor that the actual stream must eventually terminate. It says only that the current construction has not exhausted all acceptable futures.
+
+\Cref{sec:workflow} specializes these parameters to workflow graphs. In that interpretation, the state must contain every fact that can affect future acceptance; the accepting set may encode evidence, role separation, resource constraints, terminal graph shape, or other final requirements.
+
+\section{Viability residuals and canonical admission}\label{sec:residual}
+
+\begin{definition}[Viability residual]\label{def:residual}
+The \emph{viability residual} of $s$ is the language
+\begin{equation}\label{eq:residual}
+  \Residual_s
+  =\left\{
+      u\in\Additions^*:
+      \exists v\in\Additions^*:\ \Run(s,uv)\in\Accept
+    \right\}
+\end{equation}
+\end{definition}
+
+Under the dead-state totalization of \cref{sec:model}, $\Residual_{\bot}=\varnothing$, because every stream from $\bot$ remains at the nonaccepting dead state.
+
+Call $x$ a \emph{prefix} of $w$ when $w=xu$ for some stream $u$; a language is \emph{prefix-closed} when it contains every prefix of each of its words. A stream $u$ belongs to $\Residual_s$ exactly when it may be consumed next and some suffix still completes the construction. Equivalently, $\Residual_s$ is the prefix closure of the ordinary accepting continuation language
+\[
+  \{w\in\Additions^*: \Run(s,w)\in\Accept\}
+\]
+Thus $\Residual_s$ contains the continuation prefixes that do not yet destroy completion viability; it is not a set of predetermined complete plans.
+
+\begin{theorem}[Residual--successor equivalence]\label{thm:residual-successor}
+For every $s\in\States$ and $u\in\Additions^*$,
+\begin{equation}\label{eq:residual-successor}
+  \boxed{
+  u\in\Residual_s
+  \quad\Longleftrightarrow\quad
+  \Viable\bigl(\Run(s,u)\bigr)}
+\end{equation}
+Equivalently, the residual consists exactly of the streams whose consumption leaves a viable state. In particular, since $\eps$ denotes the empty stream,
+\begin{equation}\label{eq:viability-empty}
+  \Viable(s)\Longleftrightarrow \eps\in\Residual_s
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+By definition, $u\in\Residual_s$ if and only if there exists $v$ with $\Run(s,uv)\in\Accept$. By \cref{lem:run-composition}, this is equivalent to the existence of $v$ with $\Run(\Run(s,u),v)\in\Accept$, which is precisely viability of $\Run(s,u)$. Taking $u=\eps$ gives \eqref{eq:viability-empty}.
+\end{proof}
+
+\begin{corollary}[Canonical admission criterion]\label{cor:canonical-admission}
+A proposed addition $a$ preserves completion viability exactly when its one-letter stream belongs to the current residual:
+\begin{equation}\label{eq:canonical-admission}
+  \boxed{
+  a\in\Residual_s
+  \quad\Longleftrightarrow\quad
+  \Viable(\delta(s,a))}
+\end{equation}
+\end{corollary}
+
+
+\begin{proof}
+For the one-letter stream $a$, we have $\Run(s,a)=\delta(s,a)$. The claim then follows from \cref{thm:residual-successor}.
+\end{proof}
+
+
+
+The criterion is semantically exact: it has neither false admissions nor false rejections relative to successor viability. This is not a decidability claim; residual membership may be undecidable.
+
+The predicate $\Legal(s,a)$ determines whether the addition has a non-dead successor; residual membership determines whether that successor retains an acceptable future. Since $\Residual_{\bot}=\varnothing$, an illegal addition is never canonically admitted.
+
+For a language $L\subseteq\Additions^*$ and stream $w\in\Additions^*$, define its left quotient, also called the language derivative, by
+\begin{equation}\label{eq:derivative}
+  w^{-1}L=\{u\in\Additions^*:wu\in L\}
+\end{equation}
+
+\begin{theorem}[Derivative law]\label{thm:derivative}
+For all $s\in\States$ and $w\in\Additions^*$,
+\begin{equation}\label{eq:derivative-law}
+  \boxed{
+  \Residual_{\Run(s,w)}=w^{-1}\Residual_s}
+\end{equation}
+Equivalently, for every $u\in\Additions^*$,
+\begin{equation}\label{eq:derivative-pointwise}
+  u\in\Residual_{\Run(s,w)}
+  \quad\Longleftrightarrow\quad
+  wu\in\Residual_s
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Using \cref{def:residual} and \cref{lem:run-composition},
+\[
+\begin{aligned}
+ u\in\Residual_{\Run(s,w)}
+ &\Longleftrightarrow
+   \exists v:\ \Run(\Run(s,w),uv)\in\Accept\\
+ &\Longleftrightarrow
+   \exists v:\ \Run(s,wuv)\in\Accept\\
+ &\Longleftrightarrow wu\in\Residual_s
+\end{aligned}
+\]
+This is exactly the definition of $w^{-1}\Residual_s$.
+\end{proof}
+
+The derivative law is the semantic update rule for proof-carrying streams. Once $w$ is consumed, the derivative removes that consumed prefix and exposes exactly the futures available from the successor state. Left derivatives compose in the expected order:
+\[
+  (uw)^{-1}L=w^{-1}(u^{-1}L)
+\]
+Thus stepwise proof updates and one update by the whole consumed stream agree.
+
+\begin{proposition}[Prefix closure]\label{prop:prefix-closure}
+Each $\Residual_s$ is prefix-closed. If $w\in\Residual_s$ and $w=xu$, then $x\in\Residual_s$. Consequently,
+\begin{equation}\label{eq:prefix-viability}
+  w\in\Residual_s
+  \Longrightarrow
+  \Viable(\Run(s,x))
+  \quad\text{for every prefix }x\text{ of }w
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Choose $v$ with $\Run(s,wv)\in\Accept$. If $w=xu$, then $\Run(s,x(uv))\in\Accept$, so $x\in\Residual_s$. Equation \eqref{eq:prefix-viability} follows from \cref{thm:residual-successor}.
+\end{proof}
+
+\begin{corollary}[Residual nonemptiness]\label{cor:residual-nonempty}
+For every state $s$,
+\begin{equation}\label{eq:residual-nonempty}
+  \Residual_s\ne\varnothing
+  \quad\Longleftrightarrow\quad
+  \Viable(s)
+\end{equation}
+\end{corollary}
+
+\begin{proof}
+If $R_s$ is nonempty, choose $w\in R_s$. Since $\varepsilon$ is a prefix
+of $w$, Proposition~\ref{prop:prefix-closure} gives $\varepsilon\in R_s$,
+hence $s$ is viable by Theorem~\ref{thm:residual-successor}. Conversely,
+if $s$ is viable, then $\varepsilon\in R_s$ by
+Theorem~\ref{thm:residual-successor}, so $R_s\neq\varnothing$.
+\end{proof}
+
+Residual membership is defined by the existence of a completion suffix, yet it guarantees viability at every state encountered while consuming that prefix.
+
+\section{Proof-carrying streams}\label{sec:pcs}
+
+\subsection{Certificates and stepwise checking}
+
+The viability residual is a semantic object and may be infinite or undecidable. A concrete implementation instead carries a certificate that denotes some language of future streams.
+
+\begin{definition}[Certificate semantics]\label{def:certificate-domain}
+A certificate semantics consists of a set $\Cert$ and a denotation map
+\[
+  \denote{\cdot}:\Cert\to 2^{\Additions^*}
+\]
+A certificate $c$ is \emph{sound at $s$} when
+\begin{equation}\label{eq:certificate-sound}
+  \denote{c}\subseteq\Residual_s
+\end{equation}
+and it is \emph{nonempty} when
+\begin{equation}\label{eq:certificate-nonempty}
+  \denote{c}\ne\varnothing
+\end{equation}
+\end{definition}
+
+If $c$ is sound at $s$ and nonempty, then $\Residual_s$ is nonempty and therefore $s$ is viable by \cref{cor:residual-nonempty}. For an implementation-dependent checking witness $\eta$, let
+$\CertCheck(c,a,c',\eta)$ be the trusted judgment that the checker validates
+$\eta$ as a witness that addition $a$ transforms certificate $c$ into $c'$.
+
+\begin{definition}[Stepwise-sound certificate update]\label{def:stepwise-soundness}
+The checker is \emph{stepwise sound} when every validated judgment satisfies
+\begin{equation}\label{eq:stepwise-soundness}
+  \CertCheck(c,a,c',\eta)
+  \Longrightarrow
+  \left(
+    \denote{c'}\subseteq a^{-1}\denote{c}
+    \ \land\
+    \denote{c'}\ne\varnothing
+  \right)
+\end{equation}
+\end{definition}
+
+Here \emph{stepwise} means one consumed addition at a time; it does not imply that checking is local to the changed subgraph.
+
+The first clause is refinement: after consuming $a$, every future claimed by $c'$ was already supported by $c$. The second says
+that the successor certificate retains at least one certified future. The producer may
+use any method to construct $c'$ and $\eta$; only the checker is trusted. We represent a checked transition of the construction state and its certificate by
+$$ (s,c)\xrightarrow{a,\eta}(\delta(s,a),c') $$
+whenever \(\CertCheck(c,a,c',\eta)\) holds.
+
+\begin{definition}[Proof-carrying stream]\label{def:pcs}
+A proof-carrying stream is any finite chain of checked steps
+\[
+  (s_0,c_0)\xrightarrow{a_0,\eta_0}
+  (s_1,c_1)\xrightarrow{a_1,\eta_1}\cdots
+  \xrightarrow{a_{n-1},\eta_{n-1}}(s_n,c_n)
+\]
+\end{definition}
+
+\subsection{Stepwise checking gives a global invariant}
+
+\begin{theorem}[Proof-carrying stream soundness]\label{thm:pcs-soundness}
+Assume the checker is stepwise sound.
+
+Let 
+\begin{equation}
+  (s_i,c_i)\xrightarrow{a_i,\eta_i}(s_{i+1},c_{i+1}),
+\qquad 0\le i<n
+\end{equation} be the checked steps of a proof-carrying stream.
+If $c_0$ is sound at $s_0$ and nonempty, then for every $i\le n$,
+\begin{equation}\label{eq:pcs-invariant}
+  \denote{c_i}\subseteq\Residual_{s_i},
+  \qquad
+  \denote{c_i}\ne\varnothing,
+  \qquad
+  \Viable(s_i)
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Induct on $i$. The base assumptions give $\denote{c_0}\subseteq\Residual_{s_0}$ and $\denote{c_0}\ne\varnothing$, hence $\Viable(s_0)$ by \cref{cor:residual-nonempty}. For the step, stepwise soundness gives
+\[
+  \denote{c_{i+1}}\subseteq a_i^{-1}\denote{c_i}
+  \subseteq a_i^{-1}\Residual_{s_i}
+  =\Residual_{s_{i+1}}
+\]
+where the second inclusion is monotonicity of left derivatives and the equality is \cref{thm:derivative}. The checked step also makes $\denote{c_{i+1}}$ nonempty, so \cref{cor:residual-nonempty} yields $\Viable(s_{i+1})$.
+\end{proof}
+
+Writing $w_0=\eps$ and $w_i=a_0\cdots a_{i-1}$ for $1\le i\le n$, repeated refinement also gives
+\begin{equation}\label{eq:proof-lineage}
+  \denote{c_i}\subseteq w_i^{-1}\denote{c_0}
+  \qquad (0\le i\le n)
+\end{equation}
+Thus the final certificate satisfies the semantic refinement of the initial certificate through the recorded sequence of admitted additions. Each certificate keeps only futures supported by the initial certificate after the admitted additions. A future omitted initially or removed by an update cannot be added back through these certificate updates.
+
+\begin{definition}[Residual completeness and derivative exactness]
+\label{def:certificate-exactness}
+A certificate update is \emph{derivative-exact} if the updated certificate
+represents exactly the futures remaining after the addition $a$ is consumed.
+That is,
+\[
+  \denote{c'}=a^{-1}\denote{c}
+\]
+A certificate $c$ is \emph{residually complete at $s$} when
+$\denote{c}=\Residual_s$.
+Thus, unlike a merely sound update, a derivative-exact update does not discard
+any futures represented by the previous certificate that remain after $a$ is
+consumed.
+\end{definition}
+
+
+If $c_0$ is residually complete at $s_0$ and every checked update is derivative-exact, induction with \cref{thm:derivative} gives $\denote{c_i}=\Residual_{s_i}$ along every checked chain. Hence each successor certificate in the chain still denotes the residual used in \cref{cor:canonical-admission}. This does not guarantee that such a successor exists or can be validated for every viable addition. More generally, a sound, nonempty certificate $c$ at $s$ may be a proper under-approximation, $\denote{c}\subsetneq\Residual_s$. Under a stepwise-sound checker, \cref{thm:pcs-soundness} still guarantees viability along admitted prefixes, although viable additions may be rejected when their surviving futures are omitted.
+
+\section{The coarsest viability-exact proof-state abstraction}\label{sec:minimal}
+
+The preceding section gives denotational conditions for checking a certificate
+lineage. We now ask a representation-independent question: which distinctions
+must any viability-exact incrementally updated proof state retain?
+
+\begin{definition}[Viability-exact proof-state abstraction]\label{def:exact-abstraction}
+An incremental proof-state abstraction is a tuple
+$(\ProofStates,\Encode,\Update,\Live)$ consisting of a proof-state set
+$\ProofStates$, a surjective encoding
+$\Encode:\States\to\ProofStates$, meaning that every proof state represents at least one construction state, an update function
+$\Update:\ProofStates\times\Additions\to\ProofStates$, and a set of live proof states $\Live\subseteq\ProofStates$. It is \emph{viability-exact}
+when the following conditions hold:
+\begin{align}
+  \Encode(\delta(s,a))
+    &=\Update(\Encode(s),a)
+    &&\forall s\in\States,\ a\in\Additions
+    \label{eq:exact-update}\\
+  \Encode(s)\in\Live
+    &\Longleftrightarrow\Viable(s)
+    &&\forall s\in\States
+    \label{eq:exact-live}
+\end{align}
+\end{definition}
+
+For viability-exact abstractions, surjectivity loses no generality. Starting from an arbitrary encoding, restrict the proof-state set to $\Encode(\States)$ and the live set to $\Live\cap\Encode(\States)$. Equation \eqref{eq:exact-update} gives $\Update(\Encode(s),a)=\Encode(\delta(s,a))\in\Encode(\States)$, so this image is closed under updates. Equation \eqref{eq:exact-update} says that encoding commutes with addition application, while \eqref{eq:exact-live} says that live proof states have neither false positives nor false negatives for viability.
+
+Extend $\Update$ to streams by
+\begin{equation}\label{eq:update-many}
+\begin{aligned}
+  \Update^*(p,\eps)&=p\\
+  \Update^*(p,aw)&=\Update^*(\Update(p,a),w)
+\end{aligned}
+\end{equation}
+
+\begin{lemma}[Proof-state updates compose]\label{lem:update-compose}
+If \eqref{eq:exact-update} holds, then for every $s\in\States$ and
+$w\in\Additions^*$,
+\begin{equation}\label{eq:update-compose}
+  \Encode(\Run(s,w))=\Update^*(\Encode(s),w)
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Induct on $w$ after generalizing the starting state. The empty case is immediate. For $w=au$, use
+\eqref{eq:exact-update} for the first addition and apply the induction hypothesis at $\delta(s,a)$.
+\end{proof}
+
+\begin{definition}[Residual equivalence]\label{def:residual-equivalence}
+States $s,t\in\States$ are \emph{residual equivalent}, written
+$s\ResidualEq t$, when
+\begin{equation}\label{eq:residual-equivalence}
+  \Residual_s=\Residual_t
+\end{equation}
+Equivalently, by \cref{thm:residual-successor},
+\[
+  \Viable(\Run(s,w))
+  \quad\Longleftrightarrow\quad
+  \Viable(\Run(t,w))
+  \qquad\text{for every }w\in\Additions^*
+\]
+\end{definition}
+
+Thus residual-equivalent states are indistinguishable by every future
+viability test. Since the relation is defined by equality of residual languages, $\ResidualEq$ is an equivalence relation.
+
+\begin{lemma}[Addition congruence]\label{lem:residual-congruence}
+If $s\ResidualEq t$, then
+$\delta(s,a)\ResidualEq\delta(t,a)$ for every $a\in\Additions$.
+\end{lemma}
+
+\begin{proof}
+By \cref{thm:derivative},
+$\Residual_{\delta(s,a)}=a^{-1}\Residual_s$ and
+$\Residual_{\delta(t,a)}=a^{-1}\Residual_t$.
+Equal languages have equal derivatives.
+\end{proof}
+
+\begin{theorem}[Residual separation]\label{thm:separation}
+Let $\ProofStates$ be any set, let $\Encode:\States\to\ProofStates$ and $\Update:\ProofStates\times\Additions\to\ProofStates$, and let $\Live\subseteq\ProofStates$. If \eqref{eq:exact-update} and \eqref{eq:exact-live} hold, then
+\begin{equation}\label{eq:separation}
+  \boxed{
+  \Encode(s)=\Encode(t)
+  \quad\Longrightarrow\quad
+  s\ResidualEq t}
+\end{equation}
+Surjectivity is not required. Equivalently, if some future stream distinguishes the viability of $s$ and $t$, then any $(\ProofStates,\Encode,\Update,\Live)$ satisfying \eqref{eq:exact-update} and \eqref{eq:exact-live} must assign them different proof states.
+\end{theorem}
+
+\begin{proof}
+Assume $\Encode(s)=\Encode(t)$ and fix $w\in\Additions^*$. By
+\cref{lem:update-compose},
+\[
+\begin{aligned}
+  \Encode(\Run(s,w))
+    &=\Update^*(\Encode(s),w)\\
+    &=\Update^*(\Encode(t),w)\\
+    &=\Encode(\Run(t,w))
+\end{aligned}
+\]
+The equal encoded states have the same membership in $\Live$; using \eqref{eq:exact-live} gives
+\[
+  \Viable(\Run(s,w))
+  \quad\Longleftrightarrow\quad
+  \Viable(\Run(t,w))
+\]
+Since $w$ was arbitrary, $s\ResidualEq t$.
+\end{proof}
+
+This is an information lower bound, not a storage or computational complexity bound.
+It does not say that a proof state must literally store a language. It says
+that no viability-exact abstraction may erase a distinction that can change
+the correct viability answer after a common future stream.
+
+Theorem~\ref{thm:separation} therefore suggests identifying exactly
+those states that a viability-exact abstraction may safely merge. Accordingly,
+define the quotient
+\[
+  Q = \States/{\ResidualEq}
+\]
+
+whose elements are the residual-equivalence classes $[s]$. 
+By \cref{lem:residual-congruence}, the update
+\begin{equation}\label{eq:quotient-update}
+  \bar\delta([s],a)=[\delta(s,a)]
+\end{equation}
+is well defined. Define the live quotient classes $\Live_Q\subseteq Q$ by
+\begin{equation}\label{eq:quotient-live}
+  [s]\in\Live_Q
+  \quad\Longleftrightarrow\quad
+  \eps\in\Residual_s
+\end{equation}
+This is well defined because equivalent states have equal residuals.
+
+\begin{theorem}[Coarsest viability-exact proof-state abstraction]\label{thm:coarsest}
+The quotient with encoding $s\mapsto[s]$, update $\bar\delta$, and live classes
+$\Live_Q$ is a viability-exact incremental proof-state abstraction. Moreover,
+for every viability-exact abstraction $(\ProofStates,\Encode,\Update,\Live)$
+there is a unique map $\phi:\ProofStates\to Q$, necessarily surjective. Its
+first identity below is defining; update and live-set preservation are
+consequences.
+\begin{align}
+  \phi(\Encode(s))
+    &=[s]
+    &&\forall s\in\States,
+    \label{eq:factor-state}\\
+  \phi(\Update(p,a))
+    &=\bar\delta(\phi(p),a)
+    &&\forall p\in\ProofStates,\ a\in\Additions,
+    \label{eq:factor-update}\\
+  p\in\Live
+    &\Longleftrightarrow\phi(p)\in\Live_Q
+    &&\forall p\in\ProofStates
+    \label{eq:factor-live}
+\end{align}
+Consequently, the partition induced by every viability-exact encoding refines
+residual equivalence, and $Q$ is the coarsest viability-exact quotient.
+\end{theorem}
+
+\begin{proof}
+The quotient update is well defined by \cref{lem:residual-congruence}, and
+the quotient live set is well defined by residual equality. Equation
+\eqref{eq:quotient-update} gives the required update equation. By
+\eqref{eq:quotient-live} and \cref{thm:residual-successor},
+\[
+  [s]\in\Live_Q
+  \quad\Longleftrightarrow\quad
+  \eps\in\Residual_s
+  \quad\Longleftrightarrow\quad
+  \Viable(s)
+\]
+so the quotient is viability-exact.
+
+Now let $(\ProofStates,\Encode,\Update,\Live)$ be viability-exact. Define
+$\phi(\Encode(s))=[s]$. If $\Encode(s)=\Encode(t)$,
+\cref{thm:separation} gives $s\ResidualEq t$, so $[s]=[t]$ and $\phi$ is well
+defined. It is surjective because $\phi(\Encode(s))=[s]$ for every residual class.
+Given $p\in\ProofStates$, choose $s$ with $p=\Encode(s)$. Then
+\[
+\begin{aligned}
+  \phi(\Update(p,a))
+  &=\phi(\Encode(\delta(s,a)))\\
+  &=[\delta(s,a)]\\
+  &=\bar\delta([s],a)\\
+  &=\bar\delta(\phi(p),a)
+\end{aligned}
+\]
+which proves \eqref{eq:factor-update}. The viability-exact live-state condition
+and \cref{thm:residual-successor} give \eqref{eq:factor-live}.
+Surjectivity of $\Encode$ makes \eqref{eq:factor-state} determine $\phi$ on all
+of $\ProofStates$, proving uniqueness.
+\end{proof}
+
+This factorization makes $Q$ coarsest: an abstraction may retain extra distinctions, but it cannot merge distinct residual classes.
+
+\begin{proposition}[Residual-language abstraction]\label{prop:canonical-abstraction}
+Let
+\[
+  P_{\Residual}=\{\Residual_s:s\in\States\},
+  \qquad
+  \Encode_{\Residual}(s)=\Residual_s
+\]
+and, for $L\in P_{\Residual}$, define
+\[
+  \Update_{\Residual}(L,a)=a^{-1}L,
+  \qquad
+  \Live_{\Residual}=\{L\in P_{\Residual}:\eps\in L\}
+\]
+Then $(P_{\Residual},\Encode_{\Residual},\Update_{\Residual},\Live_{\Residual})$ is viability-exact, and its factor map to $Q$ is a bijection.
+\end{proposition}
+
+\begin{proof}
+For $L=\Residual_s$, \cref{thm:derivative} gives
+$a^{-1}L=\Residual_{\delta(s,a)}\in P_{\Residual}$, so
+$\Update_{\Residual}(L,a)=a^{-1}L$ is again an element of $P_{\Residual}$ and is defined directly
+from $L$, without choosing a representative state. The encoding
+$\Encode_{\Residual}$ is surjective by definition; the derivative and
+residual--successor theorems give exact update and viability classification.
+Finally, $\Residual_s\mapsto[s]$ is well defined and bijective because
+residual equality is exactly residual equivalence.
+\end{proof}
+
+Thus, $S$ is the concrete state space, $Q$ is its minimal viability-exact quotient, and $P_{\Residual}$ is the same quotient represented canonically by residual languages.
+
+Sections~\ref{sec:pcs} and~\ref{sec:minimal} give different guarantees. A nonempty sound certificate may be a proper under-approximation of the residual and therefore preserve viability while rejecting some viable additions. Residually complete certificates with derivative-exact checked updates track the residual along the checked chain; a viability-exact state-indexed abstraction must preserve all distinctions between different residual classes.
+
+\begin{corollary}[Finite viability-exact proof-state abstractions]\label{cor:finite-state}
+A finite viability-exact incremental proof-state abstraction exists if and only if the set of distinct residuals $\Residual_s$ is finite. When finite, $|Q|$ is the minimum possible value of $|\ProofStates|$ among viability-exact abstractions.
+\end{corollary}
+
+\begin{proof}
+If the set of distinct residuals $\{\Residual_s : s\in\States\}$ is finite,
+then the residual quotient $Q=\States/{\ResidualEq}$ is finite. By
+Theorem~\ref{thm:coarsest}, $Q$ is a viability-exact
+proof-state abstraction, so a finite viability-exact abstraction exists.
+
+Conversely, suppose $(P,E,U,\Live)$ is a finite viability-exact abstraction.
+By Theorem~\ref{thm:coarsest}, there is a surjective factor map
+$\phi:P\to Q$. Hence $Q$ is finite, and therefore the set of distinct
+residuals is finite.
+
+Moreover, for every viability-exact abstraction $P$, the surjectivity of
+$\phi:P\to Q$ gives
+\[
+|Q|\le |P|
+\]
+Since the quotient abstraction itself has proof-state set $Q$, this bound is
+attained. Thus $|Q|$ is the minimum possible size of a viability-exact
+proof-state abstraction.
+\end{proof}
+
+The corollary does not assert that the quotient can be computed, nor that a
+finite abstraction is small. It characterizes exactly when finite viability-exact representation is possible, independently of computational considerations.
+
+\section{Specialization to streamed workflow graphs}\label{sec:workflow}
+
+The abstract model specializes to workflow graphs by taking $\States$ as
+partial directed workflow graphs $G$ containing all information relevant to
+final acceptance, $\Additions$ as fully specified atomic additions, $\delta$
+as atomic application with invalid additions sent to the dead state, and
+$\Accept$ as the completed graphs satisfying the final-graph acceptance
+predicate. With this instantiation, the abstract results apply without
+further graph-specific assumptions.
+
+\begin{corollary}[Workflow-prefix viability]\label{cor:workflow-viability}
+Under this instantiation, assuming each graph state contains all information relevant to final acceptance, let $(G_0,c_0)\xrightarrow{a_0,\eta_0}\cdots\xrightarrow{a_{n-1},\eta_{n-1}}(G_n,c_n)$ be a proof-carrying stream under a stepwise-sound checker, with $c_0$ sound at $G_0$ and nonempty. Then every admitted partial workflow graph $G_i$ has a finite completion satisfying the final-graph acceptance predicate.
+\end{corollary}
+
+\begin{proof}
+Immediate from \cref{thm:pcs-soundness}, since $\Accept$ is the set of completed graphs satisfying that predicate.
+\end{proof}
+
+\begin{example}[Two policy-compliant routes]\label{ex:routes}
+Consider a release node that may be completed through route $A$ or route $B$. Each route requires its own evidence edge and final approval. At state $G$, both routes remain possible, so $\Residual_G$ contains continuation prefixes compatible with either route.
+
+Suppose an addition $a$ permanently closes route $A$ while leaving route $B$ available. Then
+\[
+  \Residual_{\delta(G,a)}=a^{-1}\Residual_G
+\]
+contains only the surviving $B$-compatible futures. The addition remains viable, but a certificate denoting only the incompatible $A$-route future has empty derivative under $a$ and cannot yield a nonempty checked successor; route $B$ nevertheless survives. The canonical admission criterion admits $a$ because $\eps\in a^{-1}\Residual_G$. A certificate can track this derivative if it can represent all the remaining futures and the checker can validate the update.
+
+If route $B$ had already been made unavailable, the same locally legal addition would yield a derivative that omits $\eps$, so the canonical admission criterion rejects it. The difference is not visible in the syntax of $a$ alone; it lies in the viability residual of the current state.
+\end{example}
+
+This example separates three notions that are often conflated:
+\begin{enumerate}[label=(\alph*)]
+  \item \emph{local legality}: whether $\Legal(G,a)$ holds;
+  \item \emph{successor viability}: whether the resulting state has at least one acceptable completion; and
+  \item \emph{residual completeness}: whether the certificate denotes the full viability residual rather than a sound under-approximation.
+\end{enumerate}
+
+Possible certificate representations include a symbolic automaton, a satisfiability-modulo-theories (SMT) formula with a satisfying assignment, a proof term with open obligations, or a family of candidate plans. The theory is neutral among them. A certificate denoting the full viability residual tracks that residual under derivative-exact checked updates. Proper under-approximations remain sound but may reject viable additions.
+
+The graph-extension motivation also explains the phrase \emph{proof-carrying}. The proof is not merely stored beside the graph; it has a lineage. Each admitted addition comes with evidence that the next certificate is a valid derivative refinement of the preceding certificate. An auditor can therefore check the certificate lineage and, when the workflow closes, the final graph.
+
+\section{Lean formalization}\label{sec:lean}
+
+The accompanying Lean~4 development, supplied as \texttt{code/ProofCarryingStreams.lean}, is written for Lean~4 \cite{demoura2021lean}. It is parameterized only by arbitrary types \texttt{State} and \texttt{Action}, a transition function \texttt{step : State $\to$ Action $\to$ State}, and an acceptance predicate \texttt{accept : State $\to$ Prop}. Here \texttt{Action} corresponds to an addition, and \texttt{run} is the list extension of \texttt{step}, corresponding to $\Run$ in \eqref{eq:run}. The source imports only Lean's \texttt{Init} library; its central definitions mirror \eqref{eq:viability} and \eqref{eq:residual}:
+
+\begin{lstlisting}
+def Viable (step : State → Action → State)
+    (accept : State → Prop) (s : State) : Prop :=
+  ∃ w : List Action, accept (run step s w)
+
+def Residual (step : State → Action → State)
+    (accept : State → Prop) (s : State)
+    (u : List Action) : Prop :=
+  ∃ v : List Action, accept (run step s (u ++ v))
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\scriptsize
+\begin{tabular}{p{0.47\textwidth}p{0.43\textwidth}}
+\toprule
+\textbf{Paper result} & \textbf{Lean declaration}\\
+\midrule
+Stream composition & \texttt{run\_append}\\
+Residual--successor equivalence & \texttt{residual\_iff\_viable\_after\_run}\\
+Canonical admission criterion & \texttt{canonical\_admission\_exact}\\
+Derivative update & \texttt{residual\_after\_run\_iff}\\
+Prefix closure and prefix viability & \texttt{residual\_prefix\_closed},\newline \texttt{viable\_at\_every\_prefix}\\
+Proof-carrying stream soundness & \texttt{proof\_carrying\_stream\_soundness}\\
+Residual-equivalence congruence & \texttt{residualEq\_step}\\
+Stream lifting of proof-state updates & \texttt{encode\_run\_eq\_updateMany}\\
+Residual separation theorem & \texttt{exact\_proof\_state\_preserves\_}\newline \texttt{residual\_distinctions}\\
+Residual-language update and viability classification & \texttt{canonical\_abstraction\_is\_exact}\\
+\bottomrule
+\end{tabular}
+\caption{Correspondence between paper statements and the Lean development.}
+\label{tab:lean-map}
+\end{table}
+
+\Cref{tab:lean-map} gives the correspondence. The canonical Lean result states residual update pointwise and exact viability classification. The quotient construction, universal factorization, quotient bijection,
+finite-state minimality result, and arbitrary prefix-closed-language realization are proved in the paper and are not formalized in the accompanying source. The development does not verify that a production workflow engine implements the selected \texttt{State},
+\texttt{Action}, \texttt{step}, and \texttt{accept}; that remains a model-validation obligation.
+
+
+
+
+\section{Relation to prior work}\label{sec:related}
+
+\paragraph{Proof-carrying systems.}
+Proof-carrying code places the burden of constructing a safety proof on an untrusted producer and leaves a comparatively small checker in the trusted base \cite{necula1997}. Foundational and modular variants extend that architecture to richer program logics and separately certified modules \cite{feng2007fpcc}. Proof-carrying hardware applies the same producer/checker asymmetry to dynamically loaded circuits \cite{drzevitzky2010pch}. Our checker architecture follows this lineage, but the certified object is an unfinished construction and the certified proposition changes after every streamed addition. Abstraction-Carrying Code uses an abstract model as the carried certificate and validates it with a specialized abstract interpreter \cite{albert2005acc}; it targets a fixed program and safety policy rather than an evolving completion-viability residual. Si and Zhang make source-to-source rewrites certificate carrying: an untrusted optimizer proposes a rewrite and a fail-closed checker recomputes the semantic side conditions, with the central refinement theorem mechanized in Lean \cite{si2026cct}. They certify behavior preservation of individual transformations, whereas our result preserves a nonempty acceptable-future space across a stream of additions.
+
+Proof-carrying plans certify complete plans against resource-aware planning semantics and provide a machine-checked soundness development \cite{hill2020pcp}. A proof-carrying stream instead avoids choosing a complete plan: its certificate denotes continuation prefixes that retain at least one completion, and an addition transforms that certificate by a derivative. The prefixes of a single certified plan therefore form a sound certificate, but generally not a residually complete certificate.
+
+\paragraph{Residual languages and minimality.}
+Language derivatives provide the update $w^{-1}L$ after consuming a prefix \cite{brzozowski1964}. Nerode equivalence identifies histories that no continuation can distinguish and underlies minimal deterministic realization \cite{nerode1958}. Our coarsest-abstraction theorem is a Nerode-style result for the viability predicate under common future addition streams. Its role here is proof-theoretic: it characterizes the proof-state distinctions required by viability-exact incremental checking and states the corresponding factorization directly in proof-state terms.
+
+\paragraph{Workflow soundness and supervisory control.}
+Workflow-net soundness asks whether cases can complete correctly in a fixed workflow model \cite{vanderAalst2011}; here the model itself is assembled while every admitted prefix retains a completion. In supervisory-control terminology, $\Accept$ is the marked set and $\Viable(s)$ is marker-coreachability, whereas nonblockingness requires every relevant reachable state to be marker-coreachable. The accepting continuation language from $s$, called the marked continuation language in that terminology, is $\{w:\Run(s,w)\in\Accept\}$, and $\Residual_s$ is its prefix closure. Residual equivalence is therefore Nerode equivalence for future viability and may be strictly coarser than marked-language equivalence because prefix closure can merge distinct marked languages. Supervisory control synthesizes behavior under controllability constraints \cite{ramadge1987,wonham1987}; here proposed additions are controllable and the object of study is the proof state accompanying admission.
+
+\newpage
+
+\paragraph{Runtime enforcement and streamed AI actions.}
+Runtime enforcement checks or edits an execution against a policy \cite{schneider2000,ligatti2005,pinisetty2017}. Proof-carrying streams can be used at such a boundary, but the policy studied here is specifically preservation of a nonempty acceptable-completion space. Recent agent-runtime work emphasizes action identity, commit-time checking, and durable authority or attestation attached to agent actions \cite{lilienthal2025,santos2026}. Those systems-level concerns are complementary: once a committed action is represented as a deterministic addition, the residual theorem describes the corresponding future-viability proof state.
+
+The contribution is therefore not new residual or minimization machinery, but its use as a semantics for unfinished proof-carrying construction streams, together with the stepwise certificate-lineage theorem, the residual separation and factorization results, and the workflow-graph interpretation.
+
+\section{Scope and limits of generality}\label{sec:scope}
+
+The sparse assumptions give broad applicability, but the resulting claims are semantic rather than algorithmic.
+
+First, viability is existential over finite streams. The theory guarantees that some acceptable continuation remains after every certified prefix. It does not guarantee that every continuation is acceptable, that an adversarial scheduler cannot avoid completion, or that an infinite stream eventually terminates.
+
+Second, additions are deterministic after they are fully specified. If an admitted addition has several possible effects on the committed state, or if uncontrollable environment steps can intervene, the correct abstraction is a transition relation or game. The viability semantics would then require the appropriate combination of existential and universal choices rather than the plain residual language used here.
+
+Third, viability-exactness is semantic, not algorithmic. The canonical residual may be infinite, undecidable, or impossible to represent compactly. \Cref{cor:finite-state} characterizes when a finite viability-exact abstraction exists; it does not provide an algorithm for finding one.
+
+Fourth, no local graph-update theorem follows from the bare model. A derivative-exact certificate update may require global knowledge of the graph and policy. Locality, compositionality, bounded proofs, or efficient checking require additional assumptions about how acceptance decomposes over graph structure.
+
+The generality boundary can be made explicit.
+
+\begin{proposition}[Arbitrary prefix-closed residuals]\label{prop:expressiveness}
+For every prefix-closed language $L\subseteq\Additions^*$, there are choices of $\States$, $\delta$, $\Accept$, and an initial state $s_0$ such that
+\[
+  \Residual_{s_0}=L
+\]
+\end{proposition}
+
+\begin{proof}
+Take $\States=\Additions^*$, let $\delta(w,a)=wa$, set $s_0=\eps$, and take $\Accept=L$. A one-line induction on $x$ gives $\Run(w,x)=wx$. Hence
+\[
+ u\in\Residual_{s_0}
+ \Longleftrightarrow
+ \exists v:\ uv\in L
+\]
+If $uv\in L$, prefix closure gives $u\in L$; if $u\in L$, choose $v=\eps$. Hence $\Residual_{s_0}=L$.
+\end{proof}
+
+\begin{corollary}[Residual-language characterization]\label{cor:residual-language-characterization}
+A language over $\Additions$ arises as $\Residual_s$ for some deterministic addition system and state $s$ if and only if it is prefix-closed.
+\end{corollary}
+
+\begin{proof}
+Every viability residual is prefix-closed by \cref{prop:prefix-closure}, and every prefix-closed language is realized by \cref{prop:expressiveness}.
+\end{proof}
+
+Arbitrary prefix-closed residual languages therefore arise under the minimal assumptions; no universal result on finiteness, decidability, finite or succinct representability, or graph locality follows without further structure. The residual and quotient remain the semantic targets.
+
+\section{Conclusion}\label{sec:conclusion}
+
+A streamed workflow addition should not be admitted merely because it is locally legal. It should be admitted only with evidence that the successor still admits a globally policy-compliant completion. Proof-carrying streams make that evidence persistent: the graph and its certificate advance together.
+
+The canonical proof state is the viability residual of future addition streams that preserve completion viability. Its update after a consumed stream is exactly a left derivative. This identity turns stepwise-checked certificate refinements into a global invariant over every admitted prefix. It also yields a separation theorem: any viability-exact incremental proof-state abstraction must preserve every residual distinction that can affect a later viability answer. The quotient by those distinctions is the coarsest viability-exact proof-state abstraction, and every viability-exact proof-state space has a canonical surjective factor map onto it.
+
+The result does not prescribe a certificate format or promise efficient computation. Starting from a sound, nonempty certificate, stepwise-sound checked updates preserve viability, although under-approximations may reject viable additions. Within the viability-exact incremental abstraction model, construction states with different viability residuals must be assigned different proof states.
+
+\begin{OpusReferences}
+
+\OpusBibEntry{demoura2021lean}{de~Moura, L. and Ullrich, S.}{2021}
+\newblock The Lean 4 Theorem Prover and Programming Language.
+\newblock In \OpusBibVenue{Automated Deduction -- CADE 28}, LNCS 12699, 625--635. Springer.
+\newblock \href{https://doi.org/10.1007/978-3-030-79876-5_37}{doi:10.1007/978-3-030-79876-5\_37}.
+
+\OpusBibEntry{necula1997}{Necula, G.~C.}{1997}
+\newblock Proof-Carrying Code.
+\newblock In \OpusBibVenue{Proceedings of the 24th ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages}, 106--119. ACM.
+\newblock \href{https://doi.org/10.1145/263699.263712}{doi:10.1145/263699.263712}.
+
+\OpusBibEntry{feng2007fpcc}{Feng, X., Ni, Z., Shao, Z., and Guo, Y.}{2007}
+\newblock An Open Framework for Foundational Proof-Carrying Code.
+\newblock In \OpusBibVenue{Proceedings of the 2nd ACM SIGPLAN Workshop on Types in Language Design and Implementation}, 67--78. ACM.
+\newblock \href{https://doi.org/10.1145/1190315.1190325}{doi:10.1145/1190315.1190325}.
+
+\OpusBibEntry{drzevitzky2010pch}{Drzevitzky, S., Kastens, U., and Platzner, M.}{2010}
+\newblock Proof-Carrying Hardware: Concept and Prototype Tool Flow for Online Verification.
+\newblock \OpusBibVenue{International Journal of Reconfigurable Computing}, 2010, Article 180242.
+\newblock \href{https://doi.org/10.1155/2010/180242}{doi:10.1155/2010/180242}.
+
+\OpusBibEntry{albert2005acc}{Albert, E., Puebla, G., and Hermenegildo, M.~V.}{2005}
+\newblock Abstraction-Carrying Code.
+\newblock In \OpusBibVenue{Logic for Programming, Artificial Intelligence, and Reasoning}, LNAI 3452, 380--397. Springer.
+\newblock \href{https://doi.org/10.1007/978-3-540-32275-7_25}{doi:10.1007/978-3-540-32275-7\_25}.
+
+\OpusBibEntry{si2026cct}{Si, Y. and Zhang, J.}{2026}
+\newblock Certificate-Carrying Transformation of Event-Driven Block Programs.
+\newblock arXiv:2607.00563.
+\newblock \href{https://doi.org/10.48550/arXiv.2607.00563}{doi:10.48550/arXiv.2607.00563}.
+
+\OpusBibEntry{hill2020pcp}{Hill, A., Komendantskaya, E., and Petrick, R.~P.~A.}{2020}
+\newblock Proof-Carrying Plans: A Resource Logic for AI Planning.
+\newblock In \OpusBibVenue{Proceedings of the 22nd International Symposium on Principles and Practice of Declarative Programming}, Article 14. ACM.
+\newblock \href{https://doi.org/10.1145/3414080.3414094}{doi:10.1145/3414080.3414094}.
+
+\OpusBibEntry{brzozowski1964}{Brzozowski, J.~A.}{1964}
+\newblock Derivatives of Regular Expressions.
+\newblock \OpusBibVenue{Journal of the ACM}, 11(4), 481--494.
+\newblock \href{https://doi.org/10.1145/321239.321249}{doi:10.1145/321239.321249}.
+
+\OpusBibEntry{nerode1958}{Nerode, A.}{1958}
+\newblock Linear Automaton Transformations.
+\newblock \OpusBibVenue{Proceedings of the American Mathematical Society}, 9(4), 541--544.
+\newblock \href{https://doi.org/10.1090/S0002-9939-1958-0135681-9}{doi:10.1090/S0002-9939-1958-0135681-9}.
+
+\OpusBibEntry{vanderAalst2011}{van~der~Aalst, W.~M.~P., van~Hee, K.~M., ter~Hofstede, A.~H.~M., Sidorova, N., Verbeek, H.~M.~W., Voorhoeve, M., and Wynn, M.~T.}{2011}
+\newblock Soundness of workflow nets: classification, decidability, and analysis.
+\newblock \OpusBibVenue{Formal Aspects of Computing}, 23, 333--363.
+\newblock \href{https://doi.org/10.1007/s00165-010-0161-4}{doi:10.1007/s00165-010-0161-4}.
+
+\OpusBibEntry{ramadge1987}{Ramadge, P.~J. and Wonham, W.~M.}{1987}
+\newblock Supervisory Control of a Class of Discrete Event Processes.
+\newblock \OpusBibVenue{SIAM Journal on Control and Optimization}, 25(1), 206--230.
+\newblock \href{https://doi.org/10.1137/0325013}{doi:10.1137/0325013}.
+
+\OpusBibEntry{wonham1987}{Wonham, W.~M. and Ramadge, P.~J.}{1987}
+\newblock On the Supremal Controllable Sublanguage of a Given Language.
+\newblock \OpusBibVenue{SIAM Journal on Control and Optimization}, 25(3), 637--659.
+\newblock \href{https://doi.org/10.1137/0325036}{doi:10.1137/0325036}.
+
+\OpusBibEntry{schneider2000}{Schneider, F.~B.}{2000}
+\newblock Enforceable Security Policies.
+\newblock \OpusBibVenue{ACM Transactions on Information and System Security}, 3(1), 30--50.
+\newblock \href{https://doi.org/10.1145/353323.353382}{doi:10.1145/353323.353382}.
+
+\OpusBibEntry{ligatti2005}{Ligatti, J., Bauer, L., and Walker, D.}{2005}
+\newblock Edit Automata: Enforcement Mechanisms for Run-Time Security Policies.
+\newblock \OpusBibVenue{International Journal of Information Security}, 4(1--2), 2--16.
+\newblock \href{https://doi.org/10.1007/s10207-004-0046-8}{doi:10.1007/s10207-004-0046-8}.
+
+\OpusBibEntry{pinisetty2017}{Pinisetty, S., Preoteasa, V., Tripakis, S., J\'eron, T., Falcone, Y., and Marchand, H.}{2017}
+\newblock Predictive Runtime Enforcement.
+\newblock \OpusBibVenue{Formal Methods in System Design}, 51(1), 154--199.
+\newblock \href{https://doi.org/10.1007/s10703-017-0271-1}{doi:10.1007/s10703-017-0271-1}.
+
+\OpusBibEntry{lilienthal2025}{Lilienthal, D. and Hong, S.}{2025}
+\newblock Mind the Gap: Time-of-Check to Time-of-Use Vulnerabilities in LLM-Enabled Agents.
+\newblock arXiv:2508.17155.
+\newblock \href{https://doi.org/10.48550/arXiv.2508.17155}{doi:10.48550/arXiv.2508.17155}.
+
+\OpusBibEntry{santos2026}{Santos-Grueiro, I.}{2026}
+\newblock Temporary Authority, Permanent Effects: Commit-Time Authorization for LLM Agents.
+\newblock arXiv:2607.10487.
+\newblock \href{https://doi.org/10.48550/arXiv.2607.10487}{doi:10.48550/arXiv.2607.10487}.
+
+\end{OpusReferences}
+
+\end{document}
